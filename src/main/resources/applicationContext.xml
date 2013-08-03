@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	 http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+	http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<context:property-placeholder location="classpath:app.properties" />
+
+
+	<bean id="command"
+		class="com.alesaudate.camel.commander.component.CommandComponent">
+		<property name="host" value="${ec2.maquina.dns}" />
+		<property name="user" value="${ec2.maquina.user}" />
+		<property name="port" value="${ec2.maquina.port}" />
+		<property name="pemLocation" value="${ec2.maquina.pemLocation}" />
+	</bean>
+
+	<bean id="processor" class="com.alesaudate.camel.example.jabber.CommandProcessor" />
+
+
+	<camelContext xmlns="http://camel.apache.org/schema/spring">
+
+
+		<endpoint id="gtalkEC2"
+			uri="xmpp://${gtalk.usuario.from.curto}@talk.google.com:5222/${gtalk.usuario.to}?serviceName=gmail.com&amp;user=${gtalk.usuario.from.longo}&amp;password=${gtalk.senha}" />
+
+		<route>
+			<from uri="timer://online?repeatCount=1" />
+			<setBody>
+				<constant>Oi, estou online</constant>
+			</setBody>
+			<to uri="ref:gtalkEC2" />
+		</route>
+
+
+		<route>
+			<from uri="ref:gtalkEC2" />
+			<choice>
+				<when>
+					<method ref="processor" method="testaInput" />
+					<process ref="processor" />
+					<log message="Enviando comando: ${body}" />
+					<to uri="command:send" />
+					<log message="Resposta: ${body}" />
+					<to uri="ref:gtalkEC2" />
+				</when>
+			</choice>
+		</route>
+	</camelContext>
+
+
+</beans>
+
